@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieMind Sentiment Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- General Setup --- */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: grid;
+            place-items: center;
+            min-height: 95vh;
+            color: #333;
+            /* Fade-in animation for the whole page */
+            animation: pageFadeIn 0.8s ease-out;
+        }
+
+        /* --- Animations --- */
+        @keyframes pageFadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes resultFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* --- Main Content Card --- */
+        .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            padding: 32px 40px;
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid #e0e0e0;
+        }
+
+        /* --- Logo --- */
+        .logo {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 24px;
+        }
+
+        /* --- Form Elements --- */
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #444;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="text"],
+        textarea {
+            padding: 12px 14px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s ease-in-out;
+            width: 100%;
+            box-sizing: border-box; /* Important for padding to work nicely */
+        }
+        
+        textarea {
+            min-height: 140px;
+            resize: vertical;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.15);
+            outline: none;
+        }
+
+        /* --- Submit Button --- */
+        button[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,123,255,0.2);
+        }
+
+        button[type="submit"]:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* --- Loader --- */
+        .loader-container {
+            display: none; /* Hidden by default */
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px auto;
+        }
+
+        .loader-container p {
+            font-weight: 600;
+            color: #555;
+        }
+
+        /* --- Result Box --- */
+        .result {
+            margin-top: 30px;
+            padding: 20px 24px;
+            border-radius: 8px;
+            border-left: 6px solid;
+            /* Fade-in animation for the result */
+            animation: resultFadeIn 0.5s ease-out;
+        }
+
+        .result h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .result p {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        /* Styles for POSITIVE result */
+        .result-positive {
+            background-color: #e6f7ec;
+            border-color: #28a745;
+        }
+        .result-positive h2 {
+            color: #237847;
+        }
+
+        /* Styles for NEGATIVE result */
+        .result-negative {
+            background-color: #fdebee;
+            border-color: #dc3545;
+        }
+        .result-negative h2 {
+            color: #8a1f29;
+        }
+
+        .review-echo {
+            font-style: italic;
+            color: #555;
+            margin-top: 16px;
+            border-left: 3px solid #ddd;
+            padding-left: 12px;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="logo">🎬 MovieMind</h1>
+        
+        <form action="/predict" method="POST" id="sentiment-form">
+            <div>
+                <label for="movie_name">🍿 Movie Name (Optional)</label>
+                <input type="text" id="movie_name" name="movie_name" placeholder="e.g., 'The Matrix'">
+            </div>
+            
+            <div>
+                <label for="review_text">🎟️ Movie Review</label>
+                <textarea id="review_text" name="review_text" placeholder="Enter your review here... it was the best movie ever!" required></textarea>
+            </div>
+            
+            <button type="submit" id="submit-button">Analyze Sentiment</button>
+
+            <div id="loader" class="loader-container">
+                <div class="loader"></div>
+                <p>Analyzing sentiment...</p>
+            </div>
+        </form>
+
+        {% if sentiment %}
+            <div class="result 
+                        {% if sentiment == 'Positive' %}
+                            result-positive
+                        {% else %}
+                            result-negative
+                        {% endif %}
+                       ">
+                
+                <h2>
+                    {% if sentiment == 'Positive' %}👍{% else %}👎{% endif %}
+                    Predicted Sentiment: {{ sentiment }}
+                </h2>
+
+                <p><strong>Confidence Score:</strong> {{ score }}</p>
+
+                {% if movie_submitted %}
+                    <p><strong>Movie:</strong> {{ movie_submitted }}</p>
+                {% endif %}
+                
+                <p class="review-echo">"{{ review_submitted }}"</p>
+            </div>
+        {% endif %}
+
+    </div>
+
+    <script>
+        // Get the form, button, and loader elements
+        const form = document.getElementById('sentiment-form');
+        const submitButton = document.getElementById('submit-button');
+        const loader = document.getElementById('loader');
+
+        // Add an event listener for when the form is submitted
+        form.addEventListener('submit', function() {
+            // Disable the button to prevent multiple clicks
+            submitButton.disabled = true;
+            
+            // Hide the button
+            submitButton.style.display = 'none';
+            
+            // Show the loader
+            loader.style.display = 'block';
+        });
+    </script>
+
+</body>
+</html>
